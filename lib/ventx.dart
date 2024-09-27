@@ -46,7 +46,8 @@ class Vx<T> {
   final ValueNotifier<T?> _notifier = ValueNotifier<T?>(null);
   StatesData? _states = StatesData.loading();
   void change(T? data, {StatesData? status}) {
-    if (data != null) _notifier.value = data;
+    // if (data != null) _notifier.value = data;
+    _notifier.value = data;
     if (status != null) _states = status;
   }
 

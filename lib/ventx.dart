@@ -37,23 +37,27 @@ class StatesData {
     return StatesData._(state: States.ERROR, message: message);
   }
 
-  factory StatesData.empty(String? message) {
+  factory StatesData.empty([String? message]) {
     return StatesData._(state: States.EMPTY, message: message);
   }
 }
 
 class Vx<T> {
-  final ValueNotifier<T?> _notifier = ValueNotifier<T?>(null);
-  StatesData? _states = StatesData.loading();
-  void change(T? data, {StatesData? status}) {
-    // if (data != null) _notifier.value = data;
-    _notifier.value = data;
-    if (status != null) _states = status;
+  final ValueNotifier<StatesData?> _stateNotifier = ValueNotifier<StatesData?>(null);
+  final ValueNotifier<T?> _dataNotifier = ValueNotifier<T?>(null);
+
+  Vx({T? data, StatesData? status}) {
+    update(data, status: status ?? StatesData.loading());
+  }
+  void update(T? data, {StatesData? status}) {
+    _dataNotifier.value = data;
+    _stateNotifier.value = status;
   }
 
-  StatesData get status => _states ?? StatesData.loading();
-  T? get value => _notifier.value;
-  ValueNotifier<T?> get listener => _notifier;
+  StatesData get status => _stateNotifier.value ?? StatesData.loading();
+  T? get value => _dataNotifier.value;
+  ValueNotifier<StatesData?> get statusListener => _stateNotifier;
+  ValueNotifier<T?> get dataListener => _dataNotifier;
 
   Widget builder({
     required Widget Function(T? data) onSuccess,
@@ -62,21 +66,26 @@ class Vx<T> {
     Widget? onLoading,
   }) {
     return ValueListenableBuilder<T?>(
-      valueListenable: listener,
-      builder: (context, value, child) {
-        var loading = onLoading ?? const Center(child: CircularProgressIndicator());
-        var empty = onEmpty != null
-            ? onEmpty(status.message)
-            : Center(child: Text(status.message ?? "EMPTY"));
-        var error = onError != null
-            ? onError(status.message)
-            : Center(child: Text(status.message ?? "ERROR"));
-        return switch (status.state) {
-          States.LOADING => loading,
-          States.EMPTY => empty,
-          States.ERROR => error,
-          _ => onSuccess(value),
-        };
+      valueListenable: dataListener,
+      builder: (_, dataValue, ___) {
+        return ValueListenableBuilder<StatesData?>(
+          valueListenable: statusListener,
+          builder: (context, stateValue, child) {
+            var loading = onLoading ?? const Center(child: CircularProgressIndicator());
+            var empty = onEmpty != null
+                ? onEmpty(status.message)
+                : Center(child: Text(status.message ?? "EMPTY"));
+            var error = onError != null
+                ? onError(status.message)
+                : Center(child: Text(status.message ?? "ERROR"));
+            return switch (stateValue?.state) {
+              States.LOADING => loading,
+              States.EMPTY => empty,
+              States.ERROR => error,
+              _ => onSuccess(dataValue),
+            };
+          },
+        );
       },
     );
   }
